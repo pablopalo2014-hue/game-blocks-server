@@ -25,6 +25,16 @@ const bannedWords = [
     "imbecil",
     "imbécil",
     "hostia",
+    "roblox",
+    "Roblox",
+    "Roblox.com",
+    "discord",
+    "discord name",
+    "usuario de discord",
+    "vortex",
+    "Vortex",
+    "dis-cord",
+    "Dis-cord",
     "hostias"
 ];
 
