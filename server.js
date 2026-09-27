@@ -11,7 +11,16 @@ const wss = new WebSocket.Server({ server });
 
 const players = new Set();
 
-// Palabras que quieres bloquear
+const positions = [
+    { x: 0, y: 0, z: 0 },
+    { x: 0, y: 0, z: 0 }
+];
+
+
+// =====================================================
+// PALABRAS PROHIBIDAS
+// =====================================================
+
 const bannedWords = [
     "joder",
     "coño",
@@ -38,14 +47,26 @@ const bannedWords = [
     "hostias"
 ];
 
+
+// =====================================================
+// INICIO
+// =====================================================
+
 app.get("/", (req, res) => {
     res.send("Servidor funcionando");
 });
 
+
+// =====================================================
+// CHAT
+// =====================================================
+
 app.post("/chat", (req, res) => {
+
     const message = req.body.message;
 
     if (!message || typeof message !== "string") {
+
         return res.status(400).json({
             error: "Mensaje inválido"
         });
@@ -53,12 +74,12 @@ app.post("/chat", (req, res) => {
 
     const lowerMessage = message.toLowerCase();
 
-    // Comprobar palabras prohibidas
     const containsBadWord = bannedWords.some(word => {
-        return lowerMessage.includes(word);
+        return lowerMessage.includes(word.toLowerCase());
     });
 
     if (containsBadWord) {
+
         console.log("Mensaje bloqueado:", message);
 
         return res.json({
@@ -69,14 +90,13 @@ app.post("/chat", (req, res) => {
 
     console.log("Mensaje aceptado:", message);
 
-    // Dato que recibirá Godot
     const data = JSON.stringify({
         type: "chat_message",
         message: message
     });
 
-    // Enviar a todos los jugadores conectados
     for (const player of players) {
+
         if (player.readyState === WebSocket.OPEN) {
             player.send(data);
         }
@@ -88,16 +108,111 @@ app.post("/chat", (req, res) => {
     });
 });
 
+
+// =====================================================
+// WEBSOCKET
+// =====================================================
+
 wss.on("connection", (socket) => {
+
+    // Máximo 2 jugadores
+    if (players.size >= 2) {
+
+        socket.close();
+
+        return;
+    }
+
+
     players.add(socket);
 
+    // El slot se asigna internamente
+    const slot = players.size - 1;
+
+    socket.slot = slot;
+
+
     console.log(
-        "Jugador conectado. Jugadores:",
+        "Jugador conectado. Slot:",
+        slot + 1,
+        "Jugadores:",
         players.size
     );
 
+
+    // Enviar posiciones actuales
+    socket.send(JSON.stringify({
+        type: "positions",
+        positions: positions
+    }));
+
+
+    socket.on("message", (message) => {
+
+        try {
+
+            const data = JSON.parse(message.toString());
+
+
+            if (data.type !== "position") {
+                return;
+            }
+
+
+            const x = Number(data.x);
+            const y = Number(data.y);
+            const z = Number(data.z);
+
+
+            if (
+                !Number.isFinite(x) ||
+                !Number.isFinite(y) ||
+                !Number.isFinite(z)
+            ) {
+
+                return;
+            }
+
+
+            positions[socket.slot] = {
+                x: x,
+                y: y,
+                z: z
+            };
+
+
+            // Mandar las posiciones a todos
+            const response = JSON.stringify({
+                type: "positions",
+                positions: positions
+            });
+
+
+            for (const player of players) {
+
+                if (player.readyState === WebSocket.OPEN) {
+                    player.send(response);
+                }
+            }
+
+        } catch (error) {
+
+            console.log("Paquete inválido");
+        }
+    });
+
+
     socket.on("close", () => {
+
         players.delete(socket);
+
+
+        positions[socket.slot] = {
+            x: 0,
+            y: 0,
+            z: 0
+        };
+
 
         console.log(
             "Jugador desconectado. Jugadores:",
@@ -106,8 +221,16 @@ wss.on("connection", (socket) => {
     });
 });
 
+
+// =====================================================
+// SERVIDOR
+// =====================================================
+
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Servidor iniciado en el puerto ${PORT}`);
+
+    console.log(
+        `Servidor iniciado en el puerto ${PORT}`
+    );
 });
