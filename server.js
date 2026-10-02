@@ -87,6 +87,14 @@ app.get("/", (req, res) => {
 // QUE HAY DE NUEVO
 // =====================================================
 
+app.get("/quehaydenuevo", (req, res) => {
+
+    res.json({
+        queHayDeNuevo: queHayDeNuevo
+    });
+
+});
+
 app.get("/news", (req, res) => {
 
     res.json({
