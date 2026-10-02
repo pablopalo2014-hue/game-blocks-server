@@ -4,6 +4,11 @@ const WebSocket = require("ws");
 
 const app = express();
 
+console.log("================================");
+console.log("GAME BLOCKS SERVER NUEVO");
+console.log("NEWS ROUTE ACTIVADA");
+console.log("================================");
+
 app.use(express.json());
 
 const server = http.createServer(app);
@@ -36,6 +41,11 @@ Si al abrir el juego sale que lo reinstales, es por una actualizacion.
 Por ahora no hay nada.
 `;
 
+app.get("/news", (req, res) => {
+    res.status(200);
+    res.type("text/plain");
+    res.send(queHayDeNuevo);
+});
 
 // =====================================================
 // ACTUALIZACION
