@@ -9,6 +9,11 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+
+// =====================================================
+// JUGADORES
+// =====================================================
+
 const players = new Set();
 
 const positions = [
@@ -18,10 +23,8 @@ const positions = [
 
 
 // =====================================================
-// QUE HAY DE NUEVO / ACTUALIZACIÓN
+// QUE HAY DE NUEVO
 // =====================================================
-
-// EDITA ESTOS DATOS DESDE GITHUB
 
 const queHayDeNuevo = `
 Hola viajero, no hay ningun update por ahora, sigue jugando tranquilo.
@@ -38,11 +41,18 @@ Si al abrir el juego sale que lo reinstales, es por una actualizacion.
 Por ahora no hay nada.
 `;
 
+
+// =====================================================
+// ACTUALIZACION PROGRAMADA
+// =====================================================
+
 const actualizacionProgramada = false;
 
-const mensajeActualizacion = "Game Blocks se actualizará próximamente.";
+const mensajeActualizacion =
+    "Game Blocks se actualizará próximamente.";
 
-const fechaActualizacion = "Próximamente";
+const fechaActualizacion =
+    "Próximamente";
 
 
 // =====================================================
@@ -63,15 +73,11 @@ const bannedWords = [
     "imbécil",
     "hostia",
     "roblox",
-    "Roblox",
-    "Roblox.com",
     "discord",
     "discord name",
     "usuario de discord",
     "vortex",
-    "Vortex",
     "dis-cord",
-    "Dis-cord",
     "hostias"
 ];
 
@@ -81,32 +87,23 @@ const bannedWords = [
 // =====================================================
 
 app.get("/", (req, res) => {
-    res.status(200).send("Servidor de Game Blocks funcionando correctamente.");
+    res.send("Servidor de Game Blocks funcionando");
 });
 
 
 // =====================================================
-// QUE HAY DE NUEVO
-// =====================================================
-
-app.get("/quehaydenuevo", (req, res) => {
-    res.status(200).json({
-        queHayDeNuevo: queHayDeNuevo
-    });
-});
-
-
-// =====================================================
-// INFORMACIÓN COMPLETA DE NOVEDADES
+// NEWS
 // =====================================================
 
 app.get("/news", (req, res) => {
+
     res.status(200).json({
         queHayDeNuevo: queHayDeNuevo,
         actualizacionProgramada: actualizacionProgramada,
         mensajeActualizacion: mensajeActualizacion,
         fechaActualizacion: fechaActualizacion
     });
+
 });
 
 
@@ -119,9 +116,11 @@ app.post("/chat", (req, res) => {
     const message = req.body.message;
 
     if (!message || typeof message !== "string") {
+
         return res.status(400).json({
             error: "Mensaje inválido"
         });
+
     }
 
     const lowerMessage = message.toLowerCase();
@@ -138,6 +137,7 @@ app.post("/chat", (req, res) => {
             success: false,
             blocked: true
         });
+
     }
 
     console.log("Mensaje aceptado:", message);
@@ -152,12 +152,14 @@ app.post("/chat", (req, res) => {
         if (player.readyState === WebSocket.OPEN) {
             player.send(data);
         }
+
     }
 
     res.json({
         success: true,
         blocked: false
     });
+
 });
 
 
@@ -167,20 +169,17 @@ app.post("/chat", (req, res) => {
 
 wss.on("connection", (socket) => {
 
-    // Máximo 2 jugadores
     if (players.size >= 2) {
-
-        console.log("Servidor lleno. Conexión rechazada.");
 
         socket.close();
 
         return;
+
     }
 
 
     players.add(socket);
 
-    // Slot del jugador
     const slot = players.size - 1;
 
     socket.slot = slot;
@@ -194,22 +193,19 @@ wss.on("connection", (socket) => {
     );
 
 
-    // Enviar posiciones actuales
     socket.send(JSON.stringify({
         type: "positions",
         positions: positions
     }));
 
 
-    // =================================================
-    // MENSAJES DEL JUGADOR
-    // =================================================
-
     socket.on("message", (message) => {
 
         try {
 
-            const data = JSON.parse(message.toString());
+            const data = JSON.parse(
+                message.toString()
+            );
 
 
             if (data.type !== "position") {
@@ -229,6 +225,7 @@ wss.on("connection", (socket) => {
             ) {
 
                 return;
+
             }
 
 
@@ -239,7 +236,6 @@ wss.on("connection", (socket) => {
             };
 
 
-            // Enviar posiciones a todos
             const response = JSON.stringify({
                 type: "positions",
                 positions: positions
@@ -251,40 +247,30 @@ wss.on("connection", (socket) => {
                 if (player.readyState === WebSocket.OPEN) {
                     player.send(response);
                 }
-            }
 
+            }
 
         } catch (error) {
 
-            console.log("Paquete inválido.");
+            console.log(
+                "Paquete inválido"
+            );
 
         }
 
     });
 
 
-    // =================================================
-    // DESCONEXIÓN
-    // =================================================
-
     socket.on("close", () => {
 
         players.delete(socket);
 
 
-        if (
-            socket.slot !== undefined &&
-            socket.slot >= 0 &&
-            socket.slot < positions.length
-        ) {
-
-            positions[socket.slot] = {
-                x: 0,
-                y: 0,
-                z: 0
-            };
-
-        }
+        positions[socket.slot] = {
+            x: 0,
+            y: 0,
+            z: 0
+        };
 
 
         console.log(
@@ -298,20 +284,6 @@ wss.on("connection", (socket) => {
 
 
 // =====================================================
-// ERRORES DEL WEBSOCKET
-// =====================================================
-
-wss.on("error", (error) => {
-
-    console.log(
-        "Error del WebSocket:",
-        error
-    );
-
-});
-
-
-// =====================================================
 // SERVIDOR
 // =====================================================
 
@@ -320,7 +292,7 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, "0.0.0.0", () => {
 
     console.log(
-        `Servidor iniciado en el puerto ${PORT}`
+        "Servidor iniciado en el puerto " + PORT
     );
 
 });
