@@ -1,3 +1,4 @@
+
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
@@ -15,6 +16,31 @@ const positions = [
     { x: 0, y: 0, z: 0 },
     { x: 0, y: 0, z: 0 }
 ];
+
+
+// =====================================================
+// QUE HAY DE NUEVO / ACTUALIZACIÓN
+// =====================================================
+
+// EDITA ESTOS DATOS DESDE GITHUB
+
+const queHayDeNuevo = `
+Hola viajero , no hay ningun update por ahora , sigue jugando tranquilo.
+Recuerda que hemos añadido:
+- nuevo juego
+- cosas en desarrollo
+- mejoras a la web
+- avatares
+- reportes
+- entre otras cosas
+Si al abrir el juego sale que lo reinstales, es por una actualizacion por ahora no hay nada.
+`;
+
+const actualizacionProgramada = false;
+
+const mensajeActualizacion = "Game Blocks se actualizará próximamente.";
+
+const fechaActualizacion = "Próximamente";
 
 
 // =====================================================
@@ -54,6 +80,22 @@ const bannedWords = [
 
 app.get("/", (req, res) => {
     res.send("Servidor funcionando");
+});
+
+
+// =====================================================
+// QUE HAY DE NUEVO
+// =====================================================
+
+app.get("/news", (req, res) => {
+
+    res.json({
+        queHayDeNuevo: queHayDeNuevo,
+        actualizacionProgramada: actualizacionProgramada,
+        mensajeActualizacion: mensajeActualizacion,
+        fechaActualizacion: fechaActualizacion
+    });
+
 });
 
 
