@@ -90,7 +90,7 @@ app.get("/", (req, res) => {
         "text/plain; charset=utf-8"
     );
 
-    res.send(queHayDeNuevo);
+    res.send("holas");
 
 });
 
