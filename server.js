@@ -3,7 +3,6 @@ const http = require("http");
 const WebSocket = require("ws");
 
 const app = express();
-
 app.use(express.json());
 
 const server = http.createServer(app);
@@ -35,11 +34,6 @@ Recuerda que hemos añadido:
 Si al abrir el juego sale que lo reinstales, es por una actualizacion.
 Por ahora no hay nada.
 `;
-
-
-// =====================================================
-// ACTUALIZACION
-// =====================================================
 
 const actualizacionProgramada = false;
 
@@ -78,24 +72,17 @@ const bannedWords = [
 
 
 // =====================================================
-// RUTA PRINCIPAL
+// DATOS PARA GODOT
 // =====================================================
 
 app.get("/", (req, res) => {
 
-    res.status(200);
-
-    res.setHeader(
-        "Content-Type",
-        "application/json; charset=utf-8"
-    );
-
-    res.send(JSON.stringify({
+    res.status(200).json({
         queHayDeNuevo: queHayDeNuevo,
         actualizacionProgramada: actualizacionProgramada,
         mensajeActualizacion: mensajeActualizacion,
         fechaActualizacion: fechaActualizacion
-    }));
+    });
 
 });
 
@@ -109,11 +96,9 @@ app.post("/chat", (req, res) => {
     const message = req.body.message;
 
     if (!message || typeof message !== "string") {
-
         return res.status(400).json({
             error: "Mensaje inválido"
         });
-
     }
 
     const lowerMessage = message.toLowerCase();
@@ -130,7 +115,6 @@ app.post("/chat", (req, res) => {
             success: false,
             blocked: true
         });
-
     }
 
     console.log("Mensaje aceptado:", message);
@@ -145,14 +129,12 @@ app.post("/chat", (req, res) => {
         if (player.readyState === WebSocket.OPEN) {
             player.send(data);
         }
-
     }
 
     res.json({
         success: true,
         blocked: false
     });
-
 });
 
 
@@ -162,11 +144,8 @@ app.post("/chat", (req, res) => {
 
 wss.on("connection", (socket) => {
 
-    // Máximo 2 jugadores
     if (players.size >= 2) {
-
         socket.close();
-
         return;
     }
 
@@ -176,7 +155,6 @@ wss.on("connection", (socket) => {
 
     socket.slot = slot;
 
-
     console.log(
         "Jugador conectado. Slot:",
         slot + 1,
@@ -184,17 +162,11 @@ wss.on("connection", (socket) => {
         players.size
     );
 
-
-    // Enviar posiciones actuales
     socket.send(JSON.stringify({
         type: "positions",
         positions: positions
     }));
 
-
-    // =================================================
-    // MENSAJES
-    // =================================================
 
     socket.on("message", (message) => {
 
@@ -204,26 +176,21 @@ wss.on("connection", (socket) => {
                 message.toString()
             );
 
-
             if (data.type !== "position") {
                 return;
             }
 
-
             const x = Number(data.x);
             const y = Number(data.y);
             const z = Number(data.z);
-
 
             if (
                 !Number.isFinite(x) ||
                 !Number.isFinite(y) ||
                 !Number.isFinite(z)
             ) {
-
                 return;
             }
-
 
             positions[socket.slot] = {
                 x: x,
@@ -231,12 +198,10 @@ wss.on("connection", (socket) => {
                 z: z
             };
 
-
             const response = JSON.stringify({
                 type: "positions",
                 positions: positions
             });
-
 
             for (const player of players) {
 
@@ -248,30 +213,22 @@ wss.on("connection", (socket) => {
 
         } catch (error) {
 
-            console.log(
-                "Paquete inválido"
-            );
+            console.log("Paquete inválido.");
 
         }
 
     });
 
 
-    // =================================================
-    // DESCONEXION
-    // =================================================
-
     socket.on("close", () => {
 
         players.delete(socket);
-
 
         positions[socket.slot] = {
             x: 0,
             y: 0,
             z: 0
         };
-
 
         console.log(
             "Jugador desconectado. Jugadores:",
