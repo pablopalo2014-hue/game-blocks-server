@@ -9,11 +9,6 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-
-// =====================================================
-// JUGADORES
-// =====================================================
-
 const players = new Set();
 
 const positions = [
@@ -43,7 +38,7 @@ Por ahora no hay nada.
 
 
 // =====================================================
-// ACTUALIZACION PROGRAMADA
+// ACTUALIZACION
 // =====================================================
 
 const actualizacionProgramada = false;
@@ -83,26 +78,24 @@ const bannedWords = [
 
 
 // =====================================================
-// INICIO
+// RUTA PRINCIPAL
 // =====================================================
 
 app.get("/", (req, res) => {
-    res.send("Servidor de Game Blocks funcionando");
-});
 
+    res.status(200);
 
-// =====================================================
-// NEWS
-// =====================================================
+    res.setHeader(
+        "Content-Type",
+        "application/json; charset=utf-8"
+    );
 
-app.get("/news", (req, res) => {
-
-    res.status(200).json({
+    res.send(JSON.stringify({
         queHayDeNuevo: queHayDeNuevo,
         actualizacionProgramada: actualizacionProgramada,
         mensajeActualizacion: mensajeActualizacion,
         fechaActualizacion: fechaActualizacion
-    });
+    }));
 
 });
 
@@ -169,14 +162,13 @@ app.post("/chat", (req, res) => {
 
 wss.on("connection", (socket) => {
 
+    // Máximo 2 jugadores
     if (players.size >= 2) {
 
         socket.close();
 
         return;
-
     }
-
 
     players.add(socket);
 
@@ -193,11 +185,16 @@ wss.on("connection", (socket) => {
     );
 
 
+    // Enviar posiciones actuales
     socket.send(JSON.stringify({
         type: "positions",
         positions: positions
     }));
 
+
+    // =================================================
+    // MENSAJES
+    // =================================================
 
     socket.on("message", (message) => {
 
@@ -225,7 +222,6 @@ wss.on("connection", (socket) => {
             ) {
 
                 return;
-
             }
 
 
@@ -260,6 +256,10 @@ wss.on("connection", (socket) => {
 
     });
 
+
+    // =================================================
+    // DESCONEXION
+    // =================================================
 
     socket.on("close", () => {
 
