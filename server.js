@@ -36,6 +36,10 @@ Si al abrir el juego sale que lo reinstales, es por una actualizacion.
 Por ahora no hay nada.
 `;
 
+app.get("/novedades", (req, res) => {
+    res.type("text/plain; charset=utf-8");
+    res.send(queHayDeNuevo);
+});
 
 // =====================================================
 // ACTUALIZACION
