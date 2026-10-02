@@ -36,23 +36,6 @@ Si al abrir el juego sale que lo reinstales, es por una actualizacion.
 Por ahora no hay nada.
 `;
 
-app.get("/novedades", (req, res) => {
-    res.type("text/plain; charset=utf-8");
-    res.send(queHayDeNuevo);
-});
-
-// =====================================================
-// ACTUALIZACION
-// =====================================================
-
-const actualizacionProgramada = false;
-
-const mensajeActualizacion =
-    "Game Blocks se actualizará próximamente.";
-
-const fechaActualizacion =
-    "Próximamente";
-
 
 // =====================================================
 // PALABRAS PROHIBIDAS
@@ -82,19 +65,23 @@ const bannedWords = [
 
 
 // =====================================================
-// API - QUE HAY DE NUEVO
+// NOVEDADES
 // =====================================================
 
 app.get("/", (req, res) => {
 
-    res.status(200);
+    res.type("text/plain");
 
-    res.setHeader(
-        "Content-Type",
-        "text/plain; charset=utf-8"
-    );
+    res.send(queHayDeNuevo);
 
-    res.send("holas");
+});
+
+
+app.get("/novedades", (req, res) => {
+
+    res.type("text/plain");
+
+    res.send(queHayDeNuevo);
 
 });
 
@@ -107,11 +94,6 @@ app.post("/chat", (req, res) => {
 
     const message = req.body.message;
 
-
-    // =================================================
-    // COMPROBAR MENSAJE
-    // =================================================
-
     if (!message || typeof message !== "string") {
 
         return res.status(400).json({
@@ -122,11 +104,7 @@ app.post("/chat", (req, res) => {
 
     }
 
-
-    // Quitamos espacios innecesarios
-
     const cleanMessage = message.trim();
-
 
     if (cleanMessage.length === 0) {
 
@@ -137,11 +115,6 @@ app.post("/chat", (req, res) => {
         });
 
     }
-
-
-    // =================================================
-    // COMPROBAR PALABRAS PROHIBIDAS
-    // =================================================
 
     const lowerMessage = cleanMessage.toLowerCase();
 
@@ -155,7 +128,7 @@ app.post("/chat", (req, res) => {
 
 
     // =================================================
-    // MENSAJE CENSURADO
+    // CENSURA
     // =================================================
 
     if (containsBadWord) {
@@ -165,21 +138,10 @@ app.post("/chat", (req, res) => {
             cleanMessage
         );
 
-
-        // IMPORTANTE:
-        // No mandamos el mensaje original
-        // a los demás jugadores.
-
-
         return res.json({
-
             success: false,
-
             blocked: true,
-
-            message:
-                "[CENSURADO POR LA MODERACION]"
-
+            message: "[CENSURADO POR LA MODERACION]"
         });
 
     }
@@ -194,25 +156,15 @@ app.post("/chat", (req, res) => {
         cleanMessage
     );
 
-
     const data = JSON.stringify({
-
         type: "chat_message",
-
         message: cleanMessage
-
     });
 
 
-    // =================================================
-    // ENVIAR A LOS JUGADORES
-    // =================================================
-
     for (const player of players) {
 
-        if (
-            player.readyState === WebSocket.OPEN
-        ) {
+        if (player.readyState === WebSocket.OPEN) {
 
             player.send(data);
 
@@ -221,18 +173,10 @@ app.post("/chat", (req, res) => {
     }
 
 
-    // =================================================
-    // RESPUESTA A GODOT
-    // =================================================
-
     res.json({
-
         success: true,
-
         blocked: false,
-
         message: cleanMessage
-
     });
 
 });
@@ -243,11 +187,6 @@ app.post("/chat", (req, res) => {
 // =====================================================
 
 wss.on("connection", (socket) => {
-
-
-    // =================================================
-    // MÁXIMO 2 JUGADORES
-    // =================================================
 
     if (players.size >= 2) {
 
@@ -262,12 +201,7 @@ wss.on("connection", (socket) => {
     }
 
 
-    // =================================================
-    // AÑADIR JUGADOR
-    // =================================================
-
     players.add(socket);
-
 
     const slot = players.size - 1;
 
@@ -282,24 +216,11 @@ wss.on("connection", (socket) => {
     );
 
 
-    // =================================================
-    // ENVIAR POSICIONES ACTUALES
-    // =================================================
+    socket.send(JSON.stringify({
+        type: "positions",
+        positions: positions
+    }));
 
-    socket.send(
-        JSON.stringify({
-
-            type: "positions",
-
-            positions: positions
-
-        })
-    );
-
-
-    // =================================================
-    // MENSAJES DEL JUGADOR
-    // =================================================
 
     socket.on("message", (message) => {
 
@@ -310,68 +231,49 @@ wss.on("connection", (socket) => {
             );
 
 
-            // =================================================
-            // POSICION
-            // =================================================
+            if (data.type !== "position") {
 
-            if (data.type === "position") {
+                return;
 
-                const x = Number(data.x);
-
-                const y = Number(data.y);
-
-                const z = Number(data.z);
+            }
 
 
-                // Comprobar que las coordenadas
-                // son números válidos
+            const x = Number(data.x);
+            const y = Number(data.y);
+            const z = Number(data.z);
+
+
+            if (
+                !Number.isFinite(x) ||
+                !Number.isFinite(y) ||
+                !Number.isFinite(z)
+            ) {
+
+                return;
+
+            }
+
+
+            positions[socket.slot] = {
+                x: x,
+                y: y,
+                z: z
+            };
+
+
+            const response = JSON.stringify({
+                type: "positions",
+                positions: positions
+            });
+
+
+            for (const player of players) {
 
                 if (
-                    !Number.isFinite(x) ||
-                    !Number.isFinite(y) ||
-                    !Number.isFinite(z)
+                    player.readyState === WebSocket.OPEN
                 ) {
 
-                    return;
-
-                }
-
-
-                // Guardar posición
-
-                positions[socket.slot] = {
-
-                    x: x,
-
-                    y: y,
-
-                    z: z
-
-                };
-
-
-                // =================================================
-                // ENVIAR POSICIONES A TODOS
-                // =================================================
-
-                const response = JSON.stringify({
-
-                    type: "positions",
-
-                    positions: positions
-
-                });
-
-
-                for (const player of players) {
-
-                    if (
-                        player.readyState === WebSocket.OPEN
-                    ) {
-
-                        player.send(response);
-
-                    }
+                    player.send(response);
 
                 }
 
@@ -388,25 +290,14 @@ wss.on("connection", (socket) => {
     });
 
 
-    // =================================================
-    // DESCONEXION
-    // =================================================
-
     socket.on("close", () => {
 
         players.delete(socket);
 
-
-        // Reiniciar posición del jugador
-
         positions[socket.slot] = {
-
             x: 0,
-
             y: 0,
-
             z: 0
-
         };
 
 
@@ -417,10 +308,6 @@ wss.on("connection", (socket) => {
 
     });
 
-
-    // =================================================
-    // ERROR
-    // =================================================
 
     socket.on("error", (error) => {
 
@@ -446,7 +333,12 @@ server.listen(
     () => {
 
         console.log(
-            "Servidor iniciado en el puerto " + PORT
+            "SERVIDOR GAME BLOCKS NUEVO INICIADO"
+        );
+
+        console.log(
+            "Puerto:",
+            PORT
         );
 
     }
