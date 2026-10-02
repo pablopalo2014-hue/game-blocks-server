@@ -36,7 +36,7 @@ Recuerda que hemos añadido:
 Si al abrir el juego sale que lo reinstales, es por una actualizacion por ahora no hay nada.
 `;
 
-const actualizacionProgramada = false;
+const actualizacionProgramada = true;
 
 const mensajeActualizacion = "Game Blocks se actualizará próximamente.";
 
