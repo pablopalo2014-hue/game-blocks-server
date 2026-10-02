@@ -3,6 +3,7 @@ const http = require("http");
 const WebSocket = require("ws");
 
 const app = express();
+
 app.use(express.json());
 
 const server = http.createServer(app);
@@ -34,6 +35,11 @@ Recuerda que hemos añadido:
 Si al abrir el juego sale que lo reinstales, es por una actualizacion.
 Por ahora no hay nada.
 `;
+
+
+// =====================================================
+// ACTUALIZACION
+// =====================================================
 
 const actualizacionProgramada = false;
 
@@ -72,17 +78,22 @@ const bannedWords = [
 
 
 // =====================================================
-// DATOS PARA GODOT
+// NOVEDADES
 // =====================================================
+
+// Godot recibe directamente el texto.
+// NO usamos JSON aquí.
 
 app.get("/", (req, res) => {
 
-    res.status(200).json({
-        queHayDeNuevo: queHayDeNuevo,
-        actualizacionProgramada: actualizacionProgramada,
-        mensajeActualizacion: mensajeActualizacion,
-        fechaActualizacion: fechaActualizacion
-    });
+    res.status(200);
+
+    res.setHeader(
+        "Content-Type",
+        "text/plain; charset=utf-8"
+    );
+
+    res.send(queHayDeNuevo);
 
 });
 
@@ -96,28 +107,39 @@ app.post("/chat", (req, res) => {
     const message = req.body.message;
 
     if (!message || typeof message !== "string") {
+
         return res.status(400).json({
             error: "Mensaje inválido"
         });
+
     }
 
     const lowerMessage = message.toLowerCase();
 
     const containsBadWord = bannedWords.some(word => {
-        return lowerMessage.includes(word.toLowerCase());
+        return lowerMessage.includes(
+            word.toLowerCase()
+        );
     });
 
     if (containsBadWord) {
 
-        console.log("Mensaje bloqueado:", message);
+        console.log(
+            "Mensaje bloqueado:",
+            message
+        );
 
         return res.json({
             success: false,
             blocked: true
         });
+
     }
 
-    console.log("Mensaje aceptado:", message);
+    console.log(
+        "Mensaje aceptado:",
+        message
+    );
 
     const data = JSON.stringify({
         type: "chat_message",
@@ -127,14 +149,18 @@ app.post("/chat", (req, res) => {
     for (const player of players) {
 
         if (player.readyState === WebSocket.OPEN) {
+
             player.send(data);
+
         }
+
     }
 
     res.json({
         success: true,
         blocked: false
     });
+
 });
 
 
@@ -144,16 +170,27 @@ app.post("/chat", (req, res) => {
 
 wss.on("connection", (socket) => {
 
+    // Máximo 2 jugadores
+
     if (players.size >= 2) {
+
+        console.log(
+            "Servidor lleno. Conexión rechazada."
+        );
+
         socket.close();
+
         return;
+
     }
+
 
     players.add(socket);
 
     const slot = players.size - 1;
 
     socket.slot = slot;
+
 
     console.log(
         "Jugador conectado. Slot:",
@@ -162,11 +199,18 @@ wss.on("connection", (socket) => {
         players.size
     );
 
+
+    // Enviar posiciones actuales
+
     socket.send(JSON.stringify({
         type: "positions",
         positions: positions
     }));
 
+
+    // =================================================
+    // MENSAJES DEL JUGADOR
+    // =================================================
 
     socket.on("message", (message) => {
 
@@ -176,21 +220,29 @@ wss.on("connection", (socket) => {
                 message.toString()
             );
 
+
             if (data.type !== "position") {
+
                 return;
+
             }
+
 
             const x = Number(data.x);
             const y = Number(data.y);
             const z = Number(data.z);
+
 
             if (
                 !Number.isFinite(x) ||
                 !Number.isFinite(y) ||
                 !Number.isFinite(z)
             ) {
+
                 return;
+
             }
+
 
             positions[socket.slot] = {
                 x: x,
@@ -198,37 +250,53 @@ wss.on("connection", (socket) => {
                 z: z
             };
 
+
+            // Enviar posiciones a todos
+
             const response = JSON.stringify({
                 type: "positions",
                 positions: positions
             });
 
+
             for (const player of players) {
 
-                if (player.readyState === WebSocket.OPEN) {
+                if (
+                    player.readyState === WebSocket.OPEN
+                ) {
+
                     player.send(response);
+
                 }
 
             }
 
         } catch (error) {
 
-            console.log("Paquete inválido.");
+            console.log(
+                "Paquete inválido."
+            );
 
         }
 
     });
 
 
+    // =================================================
+    // DESCONEXION
+    // =================================================
+
     socket.on("close", () => {
 
         players.delete(socket);
+
 
         positions[socket.slot] = {
             x: 0,
             y: 0,
             z: 0
         };
+
 
         console.log(
             "Jugador desconectado. Jugadores:",
@@ -246,10 +314,14 @@ wss.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, "0.0.0.0", () => {
+server.listen(
+    PORT,
+    "0.0.0.0",
+    () => {
 
-    console.log(
-        "Servidor iniciado en el puerto " + PORT
-    );
+        console.log(
+            "Servidor iniciado en el puerto " + PORT
+        );
 
-});
+    }
+);
