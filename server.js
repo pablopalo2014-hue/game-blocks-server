@@ -1,4 +1,3 @@
-
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
@@ -41,11 +40,9 @@ Por ahora no hay nada.
 
 const actualizacionProgramada = false;
 
-const mensajeActualizacion =
-    "Game Blocks se actualizará próximamente.";
+const mensajeActualizacion = "Game Blocks se actualizará próximamente.";
 
-const fechaActualizacion =
-    "Próximamente";
+const fechaActualizacion = "Próximamente";
 
 
 // =====================================================
@@ -84,9 +81,7 @@ const bannedWords = [
 // =====================================================
 
 app.get("/", (req, res) => {
-
-    res.send("Servidor de Game Blocks funcionando correctamente.");
-
+    res.status(200).send("Servidor de Game Blocks funcionando correctamente.");
 });
 
 
@@ -95,27 +90,23 @@ app.get("/", (req, res) => {
 // =====================================================
 
 app.get("/quehaydenuevo", (req, res) => {
-
     res.status(200).json({
         queHayDeNuevo: queHayDeNuevo
     });
-
 });
 
 
 // =====================================================
-// NEWS / INFORMACIÓN COMPLETA
+// INFORMACIÓN COMPLETA DE NOVEDADES
 // =====================================================
 
 app.get("/news", (req, res) => {
-
     res.status(200).json({
         queHayDeNuevo: queHayDeNuevo,
         actualizacionProgramada: actualizacionProgramada,
         mensajeActualizacion: mensajeActualizacion,
         fechaActualizacion: fechaActualizacion
     });
-
 });
 
 
@@ -128,7 +119,6 @@ app.post("/chat", (req, res) => {
     const message = req.body.message;
 
     if (!message || typeof message !== "string") {
-
         return res.status(400).json({
             error: "Mensaje inválido"
         });
@@ -137,9 +127,7 @@ app.post("/chat", (req, res) => {
     const lowerMessage = message.toLowerCase();
 
     const containsBadWord = bannedWords.some(word => {
-
         return lowerMessage.includes(word.toLowerCase());
-
     });
 
     if (containsBadWord) {
@@ -162,9 +150,7 @@ app.post("/chat", (req, res) => {
     for (const player of players) {
 
         if (player.readyState === WebSocket.OPEN) {
-
             player.send(data);
-
         }
     }
 
@@ -184,6 +170,8 @@ wss.on("connection", (socket) => {
     // Máximo 2 jugadores
     if (players.size >= 2) {
 
+        console.log("Servidor lleno. Conexión rechazada.");
+
         socket.close();
 
         return;
@@ -192,7 +180,7 @@ wss.on("connection", (socket) => {
 
     players.add(socket);
 
-    // El slot se asigna internamente
+    // Slot del jugador
     const slot = players.size - 1;
 
     socket.slot = slot;
@@ -213,6 +201,10 @@ wss.on("connection", (socket) => {
     }));
 
 
+    // =================================================
+    // MENSAJES DEL JUGADOR
+    // =================================================
+
     socket.on("message", (message) => {
 
         try {
@@ -221,9 +213,7 @@ wss.on("connection", (socket) => {
 
 
             if (data.type !== "position") {
-
                 return;
-
             }
 
 
@@ -239,7 +229,6 @@ wss.on("connection", (socket) => {
             ) {
 
                 return;
-
             }
 
 
@@ -250,7 +239,7 @@ wss.on("connection", (socket) => {
             };
 
 
-            // Mandar las posiciones a todos
+            // Enviar posiciones a todos
             const response = JSON.stringify({
                 type: "positions",
                 positions: positions
@@ -260,30 +249,42 @@ wss.on("connection", (socket) => {
             for (const player of players) {
 
                 if (player.readyState === WebSocket.OPEN) {
-
                     player.send(response);
-
                 }
             }
 
+
         } catch (error) {
 
-            console.log("Paquete inválido");
+            console.log("Paquete inválido.");
 
         }
+
     });
 
+
+    // =================================================
+    // DESCONEXIÓN
+    // =================================================
 
     socket.on("close", () => {
 
         players.delete(socket);
 
 
-        positions[socket.slot] = {
-            x: 0,
-            y: 0,
-            z: 0
-        };
+        if (
+            socket.slot !== undefined &&
+            socket.slot >= 0 &&
+            socket.slot < positions.length
+        ) {
+
+            positions[socket.slot] = {
+                x: 0,
+                y: 0,
+                z: 0
+            };
+
+        }
 
 
         console.log(
@@ -292,6 +293,20 @@ wss.on("connection", (socket) => {
         );
 
     });
+
+});
+
+
+// =====================================================
+// ERRORES DEL WEBSOCKET
+// =====================================================
+
+wss.on("error", (error) => {
+
+    console.log(
+        "Error del WebSocket:",
+        error
+    );
 
 });
 
