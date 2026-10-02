@@ -25,7 +25,8 @@ const positions = [
 // EDITA ESTOS DATOS DESDE GITHUB
 
 const queHayDeNuevo = `
-Hola viajero , no hay ningun update por ahora , sigue jugando tranquilo.
+Hola viajero, no hay ningun update por ahora, sigue jugando tranquilo.
+
 Recuerda que hemos añadido:
 - nuevo juego
 - cosas en desarrollo
@@ -33,14 +34,18 @@ Recuerda que hemos añadido:
 - avatares
 - reportes
 - entre otras cosas
-Si al abrir el juego sale que lo reinstales, es por una actualizacion por ahora no hay nada.
+
+Si al abrir el juego sale que lo reinstales, es por una actualizacion.
+Por ahora no hay nada.
 `;
 
-const actualizacionProgramada = true;
+const actualizacionProgramada = false;
 
-const mensajeActualizacion = "Game Blocks se actualizará próximamente.";
+const mensajeActualizacion =
+    "Game Blocks se actualizará próximamente.";
 
-const fechaActualizacion = "Próximamente";
+const fechaActualizacion =
+    "Próximamente";
 
 
 // =====================================================
@@ -79,7 +84,9 @@ const bannedWords = [
 // =====================================================
 
 app.get("/", (req, res) => {
-    res.send("Servidor funcionando");
+
+    res.send("Servidor de Game Blocks funcionando correctamente.");
+
 });
 
 
@@ -89,15 +96,20 @@ app.get("/", (req, res) => {
 
 app.get("/quehaydenuevo", (req, res) => {
 
-    res.json({
+    res.status(200).json({
         queHayDeNuevo: queHayDeNuevo
     });
 
 });
 
+
+// =====================================================
+// NEWS / INFORMACIÓN COMPLETA
+// =====================================================
+
 app.get("/news", (req, res) => {
 
-    res.json({
+    res.status(200).json({
         queHayDeNuevo: queHayDeNuevo,
         actualizacionProgramada: actualizacionProgramada,
         mensajeActualizacion: mensajeActualizacion,
@@ -125,7 +137,9 @@ app.post("/chat", (req, res) => {
     const lowerMessage = message.toLowerCase();
 
     const containsBadWord = bannedWords.some(word => {
+
         return lowerMessage.includes(word.toLowerCase());
+
     });
 
     if (containsBadWord) {
@@ -148,7 +162,9 @@ app.post("/chat", (req, res) => {
     for (const player of players) {
 
         if (player.readyState === WebSocket.OPEN) {
+
             player.send(data);
+
         }
     }
 
@@ -205,7 +221,9 @@ wss.on("connection", (socket) => {
 
 
             if (data.type !== "position") {
+
                 return;
+
             }
 
 
@@ -221,6 +239,7 @@ wss.on("connection", (socket) => {
             ) {
 
                 return;
+
             }
 
 
@@ -241,13 +260,16 @@ wss.on("connection", (socket) => {
             for (const player of players) {
 
                 if (player.readyState === WebSocket.OPEN) {
+
                     player.send(response);
+
                 }
             }
 
         } catch (error) {
 
             console.log("Paquete inválido");
+
         }
     });
 
@@ -268,7 +290,9 @@ wss.on("connection", (socket) => {
             "Jugador desconectado. Jugadores:",
             players.size
         );
+
     });
+
 });
 
 
@@ -283,4 +307,5 @@ server.listen(PORT, "0.0.0.0", () => {
     console.log(
         `Servidor iniciado en el puerto ${PORT}`
     );
+
 });
