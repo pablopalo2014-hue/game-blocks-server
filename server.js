@@ -49,6 +49,9 @@ const mensajeActualizacion =
 const fechaActualizacion =
     "Próximamente";
 
+app.get("/news", (req, res) => {
+    res.send(queHayDeNuevo);
+});
 
 // =====================================================
 // PALABRAS PROHIBIDAS
