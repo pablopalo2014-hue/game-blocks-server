@@ -30,10 +30,11 @@ Recuerda que hemos añadido:
 - mejoras a la web
 - avatares
 - reportes
+- monedas
 - entre otras cosas
 
 Si al abrir el juego sale que lo reinstales, es por una actualizacion.
-Por ahora no hay nada.
+Por ahora no hay nada. 
 `;
 
 
