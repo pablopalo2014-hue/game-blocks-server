@@ -4,11 +4,6 @@ const WebSocket = require("ws");
 
 const app = express();
 
-console.log("================================");
-console.log("GAME BLOCKS SERVER NUEVO");
-console.log("NEWS ROUTE ACTIVADA");
-console.log("================================");
-
 app.use(express.json());
 
 const server = http.createServer(app);
@@ -41,11 +36,6 @@ Si al abrir el juego sale que lo reinstales, es por una actualizacion.
 Por ahora no hay nada.
 `;
 
-app.get("/news", (req, res) => {
-    res.status(200);
-    res.type("text/plain");
-    res.send(queHayDeNuevo);
-});
 
 // =====================================================
 // ACTUALIZACION
@@ -59,11 +49,6 @@ const mensajeActualizacion =
 const fechaActualizacion =
     "Próximamente";
 
-app.get("/news", (req, res) => {
-    res.status(200);
-    res.type("text/plain");
-    res.send(queHayDeNuevo);
-});
 
 // =====================================================
 // PALABRAS PROHIBIDAS
@@ -139,20 +124,12 @@ app.post("/chat", (req, res) => {
     const message = req.body.message;
 
 
-    // =================================================
-    // COMPROBAR MENSAJE
-    // =================================================
-
     if (!message || typeof message !== "string") {
 
         return res.status(400).json({
-
             success: false,
-
             blocked: false,
-
             message: "Mensaje inválido"
-
         });
 
     }
@@ -164,13 +141,9 @@ app.post("/chat", (req, res) => {
     if (cleanMessage.length === 0) {
 
         return res.status(400).json({
-
             success: false,
-
             blocked: false,
-
             message: "Mensaje vacío"
-
         });
 
     }
@@ -205,7 +178,6 @@ app.post("/chat", (req, res) => {
             cleanMessage
         );
 
-
         return res.json({
 
             success: false,
@@ -239,10 +211,6 @@ app.post("/chat", (req, res) => {
     });
 
 
-    // =================================================
-    // ENVIAR A TODOS LOS JUGADORES
-    // =================================================
-
     for (const player of players) {
 
         if (
@@ -255,10 +223,6 @@ app.post("/chat", (req, res) => {
 
     }
 
-
-    // =================================================
-    // RESPUESTA A GODOT
-    // =================================================
 
     res.json({
 
@@ -279,11 +243,6 @@ app.post("/chat", (req, res) => {
 
 wss.on("connection", (socket) => {
 
-
-    // =================================================
-    // MÁXIMO 2 JUGADORES
-    // =================================================
-
     if (players.size >= 2) {
 
         console.log(
@@ -296,10 +255,6 @@ wss.on("connection", (socket) => {
 
     }
 
-
-    // =================================================
-    // REGISTRAR JUGADOR
-    // =================================================
 
     players.add(socket);
 
@@ -317,7 +272,7 @@ wss.on("connection", (socket) => {
 
 
     // =================================================
-    // ENVIAR POSICIONES ACTUALES
+    // POSICIONES INICIALES
     // =================================================
 
     socket.send(
@@ -344,10 +299,6 @@ wss.on("connection", (socket) => {
             );
 
 
-            // =================================================
-            // POSICION
-            // =================================================
-
             if (data.type !== "position") {
 
                 return;
@@ -362,10 +313,6 @@ wss.on("connection", (socket) => {
             const z = Number(data.z);
 
 
-            // =================================================
-            // COMPROBAR COORDENADAS
-            // =================================================
-
             if (
                 !Number.isFinite(x) ||
                 !Number.isFinite(y) ||
@@ -376,10 +323,6 @@ wss.on("connection", (socket) => {
 
             }
 
-
-            // =================================================
-            // GUARDAR POSICION
-            // =================================================
 
             positions[socket.slot] = {
 
@@ -393,7 +336,7 @@ wss.on("connection", (socket) => {
 
 
             // =================================================
-            // ENVIAR POSICIONES
+            // ENVIAR POSICIONES A TODOS
             // =================================================
 
             const response = JSON.stringify({
@@ -457,7 +400,7 @@ wss.on("connection", (socket) => {
 
 
     // =================================================
-    // ERROR WEBSOCKET
+    // ERROR
     // =================================================
 
     socket.on("error", (error) => {
@@ -484,7 +427,8 @@ server.listen(
     () => {
 
         console.log(
-            "Servidor iniciado en el puerto " + PORT
+            "Servidor de Game Blocks iniciado en el puerto "
+            + PORT
         );
 
     }
