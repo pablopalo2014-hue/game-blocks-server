@@ -21,7 +21,8 @@ const positions = [
 // =====================================================
 // Escribe aquí el ID de un juego que ya esté publicado.
 // Ejemplo: const FEATURED_GAME_ID = "123456";
-const FEATURED_GAME_ID = "PON_AQUI_EL_ID";
+const FEATURED_GAME_ID = "636831
+";
 
 // =====================================================
 // ALMACENAMIENTO DE JUEGOS
