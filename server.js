@@ -11,11 +11,17 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const players = new Set();
-
 const positions = [
     { x: 0, y: 0, z: 0 },
     { x: 0, y: 0, z: 0 }
 ];
+
+// =====================================================
+// CONFIGURACIÓN: JUEGO FEATURED
+// =====================================================
+// Escribe aquí el ID de un juego que ya esté publicado.
+// Ejemplo: const FEATURED_GAME_ID = "123456";
+const FEATURED_GAME_ID = "PON_AQUI_EL_ID";
 
 // =====================================================
 // ALMACENAMIENTO DE JUEGOS
@@ -57,6 +63,29 @@ function validGameEntry(game) {
     );
 }
 
+function getGameWithScene(game) {
+    if (!validGameEntry(game)) {
+        return null;
+    }
+
+    const filePath = path.join(gamesDirectory, game.file);
+    if (!fs.existsSync(filePath)) {
+        return null;
+    }
+
+    const scene = fs.readFileSync(filePath, "utf8");
+    if (!scene.startsWith("[gd_scene")) {
+        return null;
+    }
+
+    return {
+        success: true,
+        id: String(game.id),
+        name: game.name,
+        scene: scene
+    };
+}
+
 // =====================================================
 // NOTICIAS
 // =====================================================
@@ -86,25 +115,10 @@ const fechaActualizacion = "Próximamente";
 // =====================================================
 
 const bannedWords = [
-    "joder",
-    "coño",
-    "mierda",
-    "puta",
-    "puto",
-    "gilipollas",
-    "cabron",
-    "cabrón",
-    "idiota",
-    "imbecil",
-    "imbécil",
-    "hostia",
-    "roblox",
-    "discord",
-    "discord name",
-    "usuario de discord",
-    "vortex",
-    "dis-cord",
-    "hostias"
+    "joder", "coño", "mierda", "puta", "puto", "gilipollas",
+    "cabron", "cabrón", "idiota", "imbecil", "imbécil",
+    "hostia", "roblox", "discord", "discord name",
+    "usuario de discord", "vortex", "dis-cord", "hostias"
 ];
 
 // =====================================================
@@ -117,10 +131,6 @@ app.get("/", (req, res) => {
     );
 });
 
-// =====================================================
-// HEALTH CHECK
-// =====================================================
-
 app.get("/health", (req, res) => {
     res.status(200).json({
         success: true,
@@ -129,10 +139,6 @@ app.get("/health", (req, res) => {
     });
 });
 
-// =====================================================
-// NEWS
-// =====================================================
-
 app.get("/news", (req, res) => {
     res.type("text/plain").status(200).send(queHayDeNuevo);
 });
@@ -140,14 +146,6 @@ app.get("/news", (req, res) => {
 // =====================================================
 // PUBLICAR JUEGO
 // =====================================================
-
-// Esta ruta coincide con el script de Godot:
-// POST /games/publish
-// Body JSON: { "name": "Nombre", "scene": "[gd_scene ...]" }
-//
-// Para proteger la publicación, configura PUBLISH_TOKEN en Render.
-// Si PUBLISH_TOKEN no está configurado, la publicación queda abierta
-// (útil solo para pruebas; no recomendable para una comunidad pública).
 
 app.post("/games/publish", (req, res) => {
     const configuredToken = process.env.PUBLISH_TOKEN;
@@ -169,7 +167,6 @@ app.post("/games/publish", (req, res) => {
     const name = typeof req.body.name === "string"
         ? req.body.name.trim()
         : "";
-
     const scene = typeof req.body.scene === "string"
         ? req.body.scene
         : "";
@@ -188,7 +185,6 @@ app.post("/games/publish", (req, res) => {
         });
     }
 
-    // ID numérico generado por el servidor.
     const games = readGames();
     let id;
 
@@ -202,12 +198,7 @@ app.post("/games/publish", (req, res) => {
     try {
         fs.writeFileSync(filePath, scene, "utf8");
 
-        const newGame = {
-            id: id,
-            name: name,
-            file: fileName
-        };
-
+        const newGame = { id, name, file: fileName };
         games.push(newGame);
         writeGames(games);
 
@@ -220,12 +211,8 @@ app.post("/games/publish", (req, res) => {
         });
     } catch (error) {
         console.error("Error publicando el juego:", error);
-
-        // Si se creó el archivo pero falló la base de datos, intentar limpiarlo.
         try {
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         } catch (_) {}
 
         return res.status(500).json({
@@ -236,17 +223,57 @@ app.post("/games/publish", (req, res) => {
 });
 
 // =====================================================
+// OBTENER JUEGO FEATURED
+// =====================================================
+
+app.get("/games/featured", (req, res) => {
+    if (!FEATURED_GAME_ID || FEATURED_GAME_ID === "PON_AQUI_EL_ID") {
+        return res.status(404).json({
+            success: false,
+            message: "Todavía no se ha configurado ningún juego Featured en server.js."
+        });
+    }
+
+    const games = readGames();
+    const featuredGame = games.find(
+        (game) => validGameEntry(game) && String(game.id) === String(FEATURED_GAME_ID)
+    );
+
+    if (!featuredGame) {
+        return res.status(404).json({
+            success: false,
+            message: `No existe ningún juego publicado con el ID Featured ${FEATURED_GAME_ID}.`
+        });
+    }
+
+    try {
+        const result = getGameWithScene(featuredGame);
+        if (!result) {
+            return res.status(500).json({
+                success: false,
+                message: "El archivo del juego Featured no existe o no es una escena TSCN válida."
+            });
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("Error leyendo el juego Featured:", error);
+        return res.status(500).json({
+            success: false,
+            message: "No se pudo leer el juego Featured."
+        });
+    }
+});
+
+// =====================================================
 // OBTENER JUEGO ALEATORIO
 // =====================================================
 
 app.get("/games/random", (req, res) => {
     const games = readGames();
-
-    const validGames = games.filter(validGameEntry);
-
-    // Excluir juegos cuyo archivo ya no exista.
-    const availableGames = validGames.filter((game) => {
-        return fs.existsSync(path.join(gamesDirectory, game.file));
+    const availableGames = games.filter((game) => {
+        return validGameEntry(game) &&
+            fs.existsSync(path.join(gamesDirectory, game.file));
     });
 
     if (availableGames.length === 0) {
@@ -260,27 +287,17 @@ app.get("/games/random", (req, res) => {
         availableGames[Math.floor(Math.random() * availableGames.length)];
 
     try {
-        const scene = fs.readFileSync(
-            path.join(gamesDirectory, selectedGame.file),
-            "utf8"
-        );
-
-        if (!scene.startsWith("[gd_scene")) {
+        const result = getGameWithScene(selectedGame);
+        if (!result) {
             return res.status(500).json({
                 success: false,
                 message: "El archivo publicado no es una escena TSCN válida."
             });
         }
 
-        return res.status(200).json({
-            success: true,
-            id: String(selectedGame.id),
-            name: selectedGame.name,
-            scene: scene
-        });
+        return res.status(200).json(result);
     } catch (error) {
-        console.error("Error leyendo el juego:", error);
-
+        console.error("Error leyendo el juego aleatorio:", error);
         return res.status(500).json({
             success: false,
             message: "No se pudo leer el juego."
@@ -304,7 +321,6 @@ app.post("/chat", (req, res) => {
     }
 
     const cleanMessage = message.trim();
-
     if (cleanMessage.length === 0) {
         return res.status(400).json({
             success: false,
@@ -314,14 +330,12 @@ app.post("/chat", (req, res) => {
     }
 
     const lowerMessage = cleanMessage.toLowerCase();
-
-    const containsBadWord = bannedWords.some((word) => {
-        return lowerMessage.includes(word.toLowerCase());
-    });
+    const containsBadWord = bannedWords.some((word) =>
+        lowerMessage.includes(word.toLowerCase())
+    );
 
     if (containsBadWord) {
         console.log("Mensaje censurado:", cleanMessage);
-
         return res.json({
             success: false,
             blocked: true,
@@ -330,16 +344,13 @@ app.post("/chat", (req, res) => {
     }
 
     console.log("Mensaje aceptado:", cleanMessage);
-
     const data = JSON.stringify({
         type: "chat_message",
         message: cleanMessage
     });
 
     for (const player of players) {
-        if (player.readyState === WebSocket.OPEN) {
-            player.send(data);
-        }
+        if (player.readyState === WebSocket.OPEN) player.send(data);
     }
 
     return res.json({
@@ -361,7 +372,6 @@ wss.on("connection", (socket) => {
     }
 
     players.add(socket);
-
     const slot = players.size - 1;
     socket.slot = slot;
 
@@ -380,34 +390,24 @@ wss.on("connection", (socket) => {
     socket.on("message", (message) => {
         try {
             const data = JSON.parse(message.toString());
-
-            if (data.type !== "position") {
-                return;
-            }
+            if (data.type !== "position") return;
 
             const x = Number(data.x);
             const y = Number(data.y);
             const z = Number(data.z);
 
-            if (
-                !Number.isFinite(x) ||
-                !Number.isFinite(y) ||
-                !Number.isFinite(z)
-            ) {
+            if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
                 return;
             }
 
             positions[socket.slot] = { x, y, z };
-
             const response = JSON.stringify({
                 type: "positions",
                 positions: positions
             });
 
             for (const player of players) {
-                if (player.readyState === WebSocket.OPEN) {
-                    player.send(response);
-                }
+                if (player.readyState === WebSocket.OPEN) player.send(response);
             }
         } catch (error) {
             console.log("Paquete WebSocket inválido.");
@@ -416,13 +416,8 @@ wss.on("connection", (socket) => {
 
     socket.on("close", () => {
         players.delete(socket);
-
         positions[socket.slot] = { x: 0, y: 0, z: 0 };
-
-        console.log(
-            "Jugador desconectado. Jugadores:",
-            players.size
-        );
+        console.log("Jugador desconectado. Jugadores:", players.size);
     });
 
     socket.on("error", (error) => {
@@ -435,7 +430,6 @@ wss.on("connection", (socket) => {
 // =====================================================
 
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, "0.0.0.0", () => {
     console.log("Servidor de Game Blocks iniciado en el puerto " + PORT);
 });
