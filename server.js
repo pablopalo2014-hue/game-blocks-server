@@ -1,3 +1,4 @@
+
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
@@ -19,8 +20,8 @@ const positions = [
 // =====================================================
 // CONFIGURACIÓN: JUEGO FEATURED
 // =====================================================
+
 // Escribe aquí el ID de un juego que ya esté publicado.
-// Ejemplo: const FEATURED_GAME_ID = "123456";
 const FEATURED_GAME_ID = "PON_AQUI_EL_ID";
 
 // =====================================================
@@ -69,11 +70,13 @@ function getGameWithScene(game) {
     }
 
     const filePath = path.join(gamesDirectory, game.file);
+
     if (!fs.existsSync(filePath)) {
         return null;
     }
 
     const scene = fs.readFileSync(filePath, "utf8");
+
     if (!scene.startsWith("[gd_scene")) {
         return null;
     }
@@ -212,6 +215,7 @@ app.post("/games/publish", (req, res) => {
         });
     } catch (error) {
         console.error("Error publicando el juego:", error);
+
         try {
             if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         } catch (_) {}
@@ -219,6 +223,66 @@ app.post("/games/publish", (req, res) => {
         return res.status(500).json({
             success: false,
             message: "No se pudo guardar el juego en el servidor."
+        });
+    }
+});
+
+// =====================================================
+// BUSCAR JUEGO POR NOMBRE O ID
+// =====================================================
+
+app.get("/games/search", (req, res) => {
+    const query = typeof req.query.query === "string"
+        ? req.query.query.trim()
+        : "";
+
+    if (!query) {
+        return res.status(400).json({
+            success: false,
+            message: "Debes indicar un nombre o ID para buscar."
+        });
+    }
+
+    const games = readGames();
+    const isId = /^\d+$/.test(query);
+    const normalizedQuery = query.toLocaleLowerCase("es");
+
+    const foundGame = games.find((game) => {
+        if (!validGameEntry(game)) {
+            return false;
+        }
+
+        if (isId) {
+            return String(game.id) === query;
+        }
+
+        return game.name.toLocaleLowerCase("es").includes(normalizedQuery);
+    });
+
+    if (!foundGame) {
+        return res.status(404).json({
+            success: false,
+            message: "Nada encontrado."
+        });
+    }
+
+    try {
+        const result = getGameWithScene(foundGame);
+
+        if (!result) {
+            return res.status(404).json({
+                success: false,
+                message: "El juego existe, pero su archivo no está disponible o no es una escena TSCN válida."
+            });
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("Error buscando el juego:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "No se pudo buscar el juego."
         });
     }
 });
@@ -249,6 +313,7 @@ app.get("/games/featured", (req, res) => {
 
     try {
         const result = getGameWithScene(featuredGame);
+
         if (!result) {
             return res.status(500).json({
                 success: false,
@@ -259,6 +324,7 @@ app.get("/games/featured", (req, res) => {
         return res.status(200).json(result);
     } catch (error) {
         console.error("Error leyendo el juego Featured:", error);
+
         return res.status(500).json({
             success: false,
             message: "No se pudo leer el juego Featured."
@@ -273,7 +339,6 @@ app.get("/games/featured", (req, res) => {
 app.get("/games/latest", (req, res) => {
     const games = readGames();
 
-    // La última publicación se añade al final de games.json.
     const latestGame = [...games].reverse().find((game) => {
         return validGameEntry(game) &&
             fs.existsSync(path.join(gamesDirectory, game.file));
@@ -288,6 +353,7 @@ app.get("/games/latest", (req, res) => {
 
     try {
         const result = getGameWithScene(latestGame);
+
         if (!result) {
             return res.status(500).json({
                 success: false,
@@ -298,6 +364,7 @@ app.get("/games/latest", (req, res) => {
         return res.status(200).json(result);
     } catch (error) {
         console.error("Error leyendo el juego más reciente:", error);
+
         return res.status(500).json({
             success: false,
             message: "No se pudo leer el juego más reciente."
@@ -311,6 +378,7 @@ app.get("/games/latest", (req, res) => {
 
 app.get("/games/random", (req, res) => {
     const games = readGames();
+
     const availableGames = games.filter((game) => {
         return validGameEntry(game) &&
             fs.existsSync(path.join(gamesDirectory, game.file));
@@ -328,6 +396,7 @@ app.get("/games/random", (req, res) => {
 
     try {
         const result = getGameWithScene(selectedGame);
+
         if (!result) {
             return res.status(500).json({
                 success: false,
@@ -338,6 +407,7 @@ app.get("/games/random", (req, res) => {
         return res.status(200).json(result);
     } catch (error) {
         console.error("Error leyendo el juego aleatorio:", error);
+
         return res.status(500).json({
             success: false,
             message: "No se pudo leer el juego."
@@ -361,6 +431,7 @@ app.post("/chat", (req, res) => {
     }
 
     const cleanMessage = message.trim();
+
     if (cleanMessage.length === 0) {
         return res.status(400).json({
             success: false,
@@ -370,12 +441,14 @@ app.post("/chat", (req, res) => {
     }
 
     const lowerMessage = cleanMessage.toLowerCase();
+
     const containsBadWord = bannedWords.some((word) =>
         lowerMessage.includes(word.toLowerCase())
     );
 
     if (containsBadWord) {
         console.log("Mensaje censurado:", cleanMessage);
+
         return res.json({
             success: false,
             blocked: true,
@@ -384,13 +457,16 @@ app.post("/chat", (req, res) => {
     }
 
     console.log("Mensaje aceptado:", cleanMessage);
+
     const data = JSON.stringify({
         type: "chat_message",
         message: cleanMessage
     });
 
     for (const player of players) {
-        if (player.readyState === WebSocket.OPEN) player.send(data);
+        if (player.readyState === WebSocket.OPEN) {
+            player.send(data);
+        }
     }
 
     return res.json({
@@ -430,6 +506,7 @@ wss.on("connection", (socket) => {
     socket.on("message", (message) => {
         try {
             const data = JSON.parse(message.toString());
+
             if (data.type !== "position") return;
 
             const x = Number(data.x);
@@ -441,13 +518,16 @@ wss.on("connection", (socket) => {
             }
 
             positions[socket.slot] = { x, y, z };
+
             const response = JSON.stringify({
                 type: "positions",
                 positions: positions
             });
 
             for (const player of players) {
-                if (player.readyState === WebSocket.OPEN) player.send(response);
+                if (player.readyState === WebSocket.OPEN) {
+                    player.send(response);
+                }
             }
         } catch (error) {
             console.log("Paquete WebSocket inválido.");
@@ -470,6 +550,7 @@ wss.on("connection", (socket) => {
 // =====================================================
 
 const PORT = process.env.PORT || 3000;
+
 server.listen(PORT, "0.0.0.0", () => {
     console.log("Servidor de Game Blocks iniciado en el puerto " + PORT);
 });
